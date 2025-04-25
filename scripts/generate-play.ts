@@ -147,7 +147,7 @@ async function generatePlayground() {
 
   for (const quiz of quizes) {
     const { difficulty, title } = resolveInfo(quiz, locale) as QuizMetaInfo & { difficulty: string }
-    const code = formatToCode(quiz, locale)
+    const code = formatToCode(quiz)
 
     if (difficulty === undefined || title === undefined) {
       console.log(c.yellow`${quiz.no} has no ${locale.toUpperCase()} version. Skipping`)

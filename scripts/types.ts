@@ -9,11 +9,6 @@ export type Action = (github: Github, context: Context, core: typeof Core, io: t
 
 export interface QuizMetaInfo {
   title: string
-  author: {
-    name: string
-    email: string
-    github: string
-  }
   tsconfig?: Record<string, any>
   original_issues: number[]
   recommended_solutions: number[]

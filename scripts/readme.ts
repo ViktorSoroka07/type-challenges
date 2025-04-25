@@ -4,8 +4,8 @@ import fs from 'fs-extra'
 import type { SupportedLocale } from './locales'
 import { defaultLocale, f, supportedLocales, t } from './locales'
 import { loadQuizes, resolveInfo } from './loader'
-import { toAnswerShort, toNearborREADME, toPlayShort, toQuizREADME, toSolutionsShort } from './toUrl'
-import type { Quiz, QuizMetaInfo } from './types'
+import { toNearborREADME, toPlayShort, toQuizREADME } from './toUrl'
+import type { Quiz } from './types'
 
 const DifficultyColors: Record<string, string> = {
   warm: 'teal',
@@ -46,10 +46,6 @@ export function toBadgeLink(url: string, label: string, text: string, color: str
 
 export function toPlanTextLink(url: string, _label: string, text: string, _color: string, _args = '') {
   return `<a href="${url}" target="_blank">${text}</a> `
-}
-
-function toAuthorInfo(author: Partial<QuizMetaInfo['author']> = {}) {
-  return `by ${author.name}${author.github ? ` <a href="https://github.com/${author.github}" target="_blank">@${author.github}</a>` : ''}`
 }
 
 function toDifficultyBadge(difficulty: string, locale: SupportedLocale) {
@@ -103,7 +99,7 @@ function getQuizesByTag(quizes: Quiz[], locale: string, tag: string) {
   })
 }
 
-async function insertInfoReadme(filepath: string, quiz: Quiz, locale: SupportedLocale, quizes: Quiz[]) {
+async function insertInfoReadme(filepath: string, quiz: Quiz, locale: SupportedLocale) {
   if (!fs.existsSync(filepath))
     return
   let text = await fs.readFile(filepath, 'utf-8')
@@ -123,21 +119,11 @@ async function insertInfoReadme(filepath: string, quiz: Quiz, locale: SupportedL
       /<!--info-header-start-->[\s\S]*<!--info-header-end-->/,
       '<!--info-header-start-->'
       + `<h1>${escapeHtml(info.title || '')} ${toDifficultyBadge(quiz.difficulty, locale)} ${(info.tags || []).map(i => toBadge('', `#${i}`, '999')).join(' ')}</h1>`
-      + `<blockquote><p>${toAuthorInfo(info.author)}</p></blockquote>`
       + '<p>'
       + toBadgeLink(toPlayShort(quiz.no, locale), '', t(locale, 'badge.take-the-challenge'), '3178c6', '?logo=typescript&logoColor=white')
       + (availableLocales.length ? ('&nbsp;&nbsp;&nbsp;' + availableLocales.map(l => toBadgeLink(toNearborREADME(quiz, l), '', t(l, 'display'), 'gray')).join(' ')) : '')
       + '</p>'
       + '<!--info-header-end-->',
-    )
-    .replace(
-      /<!--info-footer-start-->[\s\S]*<!--info-footer-end-->/,
-      '<!--info-footer-start--><br>'
-      + toBadgeLink(`../../${f('README', locale, 'md')}`, '', t(locale, 'badge.back'), 'grey')
-      + toBadgeLink(toAnswerShort(quiz.no, locale), '', t(locale, 'badge.share-your-solutions'), 'teal')
-      + toBadgeLink(toSolutionsShort(quiz.no), '', t(locale, 'badge.checkout-solutions'), 'de5a77', '?logo=awesome-lists&logoColor=white')
-      + (Array.isArray(info.related) && info.related.length ? `<hr><h3>${t(locale, 'readme.related-challenges')}</h3>${quizNoToBadges(info.related, quizes, locale, true)}` : '')
-      + '<!--info-footer-end-->',
     )
 
   /* eslint-enable prefer-template */
@@ -213,7 +199,6 @@ async function updateQuestionsREADME(quizes: Quiz[]) {
         ),
         quiz,
         locale,
-        quizes,
       )
     }
   }

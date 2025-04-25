@@ -22,7 +22,7 @@ export async function build() {
     for (const locale of supportedLocales) {
       const info = resolveInfo(quiz, locale)
 
-      const code = formatToCode(quiz, locale)
+      const code = formatToCode(quiz)
 
       const url = toPlaygroundUrl(code, info.tsconfig || {})
 

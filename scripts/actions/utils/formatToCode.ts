@@ -7,10 +7,10 @@ import { toLinks } from './toLinks'
 import { toDivider } from './toDivider'
 import { toFooter } from './toFooter'
 
-export function formatToCode(quiz: Quiz, locale: SupportedLocale) {
+export function formatToCode(quiz: Quiz, locale: SupportedLocale = defaultLocale) {
   return `${toCommentBlock(
     toInfoHeader(quiz, locale)
-    + (quiz.readme[locale] || quiz.readme[defaultLocale])
+    + (quiz.readme[locale])
     + toLinks(quiz, locale),
   )
   + toDivider(t(locale, 'divider.code-start'))
