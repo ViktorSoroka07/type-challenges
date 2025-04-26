@@ -13,4 +13,4 @@ type head1 = First<arr1> // expected to be 'a'
 type head2 = First<arr2> // expected to be 3
 ```
 
-<hr><h3>Related Challenges</h3><a href="https://github.com/type-challenges/type-challenges/blob/main/questions/00015-medium-last/README.md" target="_blank"><img src="https://img.shields.io/badge/-15%E3%83%BBLast%20of%20Array-d9901a" alt="15・Last of Array"/></a> <!--info-footer-end-->
+<!--info-footer-start--><hr><h3>Related Challenges</h3><a href="https://github.com/type-challenges/type-challenges/blob/main/questions/00015-medium-last/README.md" target="_blank"><img src="https://img.shields.io/badge/-15%E3%83%BBLast%20of%20Array-d9901a" alt="15・Last of Array"/></a> <!--info-footer-end-->

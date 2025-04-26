@@ -11,4 +11,3 @@ type spaceX = ['FALCON 9', 'FALCON HEAVY', 'DRAGON', 'STARSHIP', 'HUMAN SPACEFLI
 type teslaLength = Length<tesla>  // expected 4
 type spaceXLength = Length<spaceX> // expected 5
 ```
-
