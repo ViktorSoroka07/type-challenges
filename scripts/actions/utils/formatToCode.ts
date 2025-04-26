@@ -1,26 +1,21 @@
 import type { Quiz } from '../../types'
-import type { SupportedLocale } from '../../locales'
-import { defaultLocale, t } from '../../locales'
+import { locale, t } from '../../locales'
 import { toCommentBlock } from './toCommentBlock'
 import { toInfoHeader } from './toInfoHeader'
-import { toLinks } from './toLinks'
 import { toDivider } from './toDivider'
 import { toFooter } from './toFooter'
 
-export function formatToCode(quiz: Quiz, locale: SupportedLocale = defaultLocale) {
+export function formatToCode(quiz: Quiz) {
   return `${toCommentBlock(
-    toInfoHeader(quiz, locale)
-    + (quiz.readme[locale])
-    + toLinks(quiz, locale),
+    toInfoHeader(quiz)
+    + (quiz.readme[locale]),
   )
-  + toDivider(t(locale, 'divider.code-start'))
+  + toDivider(t('divider.code-start'))
   }\n${
     (quiz.template || '').trim()
   }\n${
-    toDivider(t(locale, 'divider.test-cases'))
+    toDivider(t('divider.test-cases'))
   }${
     (quiz.tests || '').trim()
-  }\n${
-    toDivider(t(locale, 'divider.further-steps'))
-  }${toCommentBlock(toFooter(quiz, locale))}`
+  }\n${toCommentBlock(toFooter())}`
 }

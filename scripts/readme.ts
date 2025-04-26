@@ -1,8 +1,7 @@
 import path from 'node:path'
 import process from 'node:process'
 import fs from 'fs-extra'
-import type { SupportedLocale } from './locales'
-import { defaultLocale, f, supportedLocales, t } from './locales'
+import { f, locale, t } from './locales'
 import { loadQuizes, resolveInfo } from './loader'
 import { toNearborREADME, toPlayShort, toQuizREADME } from './toUrl'
 import type { Quiz } from './types'
@@ -48,58 +47,58 @@ export function toPlanTextLink(url: string, _label: string, text: string, _color
   return `<a href="${url}" target="_blank">${text}</a> `
 }
 
-function toDifficultyBadge(difficulty: string, locale: SupportedLocale) {
-  return toBadge('', t(locale, `difficulty.${difficulty}`), DifficultyColors[difficulty])
+function toDifficultyBadge(difficulty: string) {
+  return toBadge('', t(`difficulty.${difficulty}`), DifficultyColors[difficulty])
 }
 
-function toDifficultyBadgeInverted(difficulty: string, locale: SupportedLocale, count: number) {
-  return toBadge(t(locale, `difficulty.${difficulty}`), count.toString(), DifficultyColors[difficulty])
+function toDifficultyBadgeInverted(difficulty: string, count: number) {
+  return toBadge(t(`difficulty.${difficulty}`), count.toString(), DifficultyColors[difficulty])
 }
 
-function toDifficultyPlainText(difficulty: string, locale: SupportedLocale, count: number) {
-  return `${t(locale, `difficulty.${difficulty}`)} (${count.toString()})`
+function toDifficultyPlainText(difficulty: string, count: number) {
+  return `${t(`difficulty.${difficulty}`)} (${count.toString()})`
 }
 
-function toDetailsInnerText(text: string, locale: SupportedLocale) {
-  return `${t(locale, `details.${text}`)}`
+function toDetailsInnerText(text: string) {
+  return `${t(`details.${text}`)}`
 }
 
-function quizToBadge(quiz: Quiz, locale: string, absolute = false, badge = true) {
+function quizToBadge(quiz: Quiz, absolute = false, badge = true) {
   const fn = badge ? toBadgeLink : toPlanTextLink
   return fn(
-    toQuizREADME(quiz, locale, absolute),
+    toQuizREADME(quiz, absolute),
     '',
-    `${quiz.no}・${quiz.info[locale]?.title || quiz.info[defaultLocale]?.title}`,
+    `${quiz.no}・${quiz.info[locale]?.title}`,
     DifficultyColors[quiz.difficulty],
   )
 }
 
-function quizNoToBadges(ids: (string | number)[], quizes: Quiz[], locale: string, absolute = false) {
+function quizNoToBadges(ids: (string | number)[], quizes: Quiz[], absolute = false) {
   return ids
     .map(i => quizes.find(q => q.no === Number(i)))
     .filter(Boolean)
-    .map(i => quizToBadge(i!, locale, absolute))
+    .map(i => quizToBadge(i!, absolute))
     .join(' ')
 }
 
-function getAllTags(quizes: Quiz[], locale: string) {
+function getAllTags(quizes: Quiz[]) {
   const set = new Set<string>()
   for (const quiz of quizes) {
-    const info = resolveInfo(quiz, locale)
+    const info = resolveInfo(quiz)
     for (const tag of (info?.tags || []))
       set.add(tag as string)
   }
   return Array.from(set).sort()
 }
 
-function getQuizesByTag(quizes: Quiz[], locale: string, tag: string) {
+function getQuizesByTag(quizes: Quiz[], tag: string) {
   return quizes.filter((quiz) => {
-    const info = resolveInfo(quiz, locale)
+    const info = resolveInfo(quiz)
     return !!info.tags?.includes(tag)
   })
 }
 
-async function insertInfoReadme(filepath: string, quiz: Quiz, locale: SupportedLocale) {
+async function insertInfoReadme(filepath: string, quiz: Quiz) {
   if (!fs.existsSync(filepath))
     return
   let text = await fs.readFile(filepath, 'utf-8')
@@ -110,18 +109,16 @@ async function insertInfoReadme(filepath: string, quiz: Quiz, locale: SupportedL
   if (!text.match(/<!--info-footer-start-->[\s\S]*<!--info-footer-end-->/))
     text = `${text}\n\n<!--info-footer-start--><!--info-footer-end-->`
 
-  const info = resolveInfo(quiz, locale)
-
-  const availableLocales = supportedLocales.filter(l => l !== locale).filter(l => !!quiz.readme[l])
+  const info = resolveInfo(quiz)
 
   text = text
     .replace(
       /<!--info-header-start-->[\s\S]*<!--info-header-end-->/,
       '<!--info-header-start-->'
-      + `<h1>${escapeHtml(info.title || '')} ${toDifficultyBadge(quiz.difficulty, locale)} ${(info.tags || []).map(i => toBadge('', `#${i}`, '999')).join(' ')}</h1>`
+      + `<h1>${escapeHtml(info.title || '')} ${toDifficultyBadge(quiz.difficulty)} ${(info.tags || []).map(i => toBadge('', `#${i}`, '999')).join(' ')}</h1>`
       + '<p>'
-      + toBadgeLink(toPlayShort(quiz.no, locale), '', t(locale, 'badge.take-the-challenge'), '3178c6', '?logo=typescript&logoColor=white')
-      + (availableLocales.length ? ('&nbsp;&nbsp;&nbsp;' + availableLocales.map(l => toBadgeLink(toNearborREADME(quiz, l), '', t(l, 'display'), 'gray')).join(' ')) : '')
+      + toBadgeLink(toPlayShort(quiz.no), '', t('badge.take-the-challenge'), '3178c6', '?logo=typescript&logoColor=white')
+      + ('&nbsp;&nbsp;&nbsp;' + toBadgeLink(toNearborREADME(), '', t('display'), 'gray'))
       + '</p>'
       + '<!--info-header-end-->',
     )
@@ -133,56 +130,54 @@ async function insertInfoReadme(filepath: string, quiz: Quiz, locale: SupportedL
 
 async function updateIndexREADME(quizes: Quiz[]) {
   // update index README
-  for (const locale of supportedLocales) {
-    const filepath = path.resolve(__dirname, '..', f('README', locale, 'md'))
+  const filepath = path.resolve(__dirname, '..', f('README', 'md'))
 
-    let challengesREADME = ''
-    let prev = ''
+  let challengesREADME = ''
+  let prev = ''
 
-    // difficulty
-    const quizesByDifficulty = [...quizes].sort((a, b) => DifficultyRank.indexOf(a.difficulty) - DifficultyRank.indexOf(b.difficulty))
+  // difficulty
+  const quizesByDifficulty = [...quizes].sort((a, b) => DifficultyRank.indexOf(a.difficulty) - DifficultyRank.indexOf(b.difficulty))
 
-    for (const quiz of quizesByDifficulty) {
-      if (prev !== quiz.difficulty)
-        challengesREADME += `${prev ? '<br><br>' : ''}${toDifficultyBadgeInverted(quiz.difficulty, locale, quizesByDifficulty.filter(q => q.difficulty === quiz.difficulty).length)}<br>`
+  for (const quiz of quizesByDifficulty) {
+    if (prev !== quiz.difficulty)
+      challengesREADME += `${prev ? '<br><br>' : ''}${toDifficultyBadgeInverted(quiz.difficulty, quizesByDifficulty.filter(q => q.difficulty === quiz.difficulty).length)}<br>`
 
-      challengesREADME += quizToBadge(quiz, locale)
+    challengesREADME += quizToBadge(quiz)
 
-      prev = quiz.difficulty
-    }
-
-    // by tags
-    challengesREADME += `<br><details><summary>${toDetailsInnerText('by-tags', locale)}</summary><br><table><tbody>`
-    const tags = getAllTags(quizes, locale)
-    for (const tag of tags) {
-      challengesREADME += `<tr><td>${toBadge('', `#${tag}`, '999')}</td><td>`
-      getQuizesByTag(quizesByDifficulty, locale, tag)
-        .forEach((quiz) => {
-          challengesREADME += quizToBadge(quiz, locale)
-        })
-      challengesREADME += '</td></tr>'
-    }
-    challengesREADME += '<tr><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code></td><td></td></tr>'
-    challengesREADME += '</tbody></table></details>'
-
-    // by plain text
-    prev = ''
-    challengesREADME += `<br><details><summary>${toDetailsInnerText('by-plain-text', locale)}</summary><br>`
-    for (const quiz of quizesByDifficulty) {
-      if (prev !== quiz.difficulty)
-        challengesREADME += `${prev ? '</ul>' : ''}<h3>${toDifficultyPlainText(quiz.difficulty, locale, quizesByDifficulty.filter(q => q.difficulty === quiz.difficulty).length)}</h3><ul>`
-      challengesREADME += `<li>${quizToBadge(quiz, locale, false, false)}</li>`
-      prev = quiz.difficulty
-    }
-    challengesREADME += '</ul></details><br>'
-
-    let readme = await fs.readFile(filepath, 'utf-8')
-    readme = readme.replace(
-      /<!--challenges-start-->[\s\S]*<!--challenges-end-->/m,
-      `<!--challenges-start-->\n${challengesREADME}\n<!--challenges-end-->`,
-    )
-    await fs.writeFile(filepath, readme, 'utf-8')
+    prev = quiz.difficulty
   }
+
+  // by tags
+  challengesREADME += `<br><details><summary>${toDetailsInnerText('by-tags')}</summary><br><table><tbody>`
+  const tags = getAllTags(quizes)
+  for (const tag of tags) {
+    challengesREADME += `<tr><td>${toBadge('', `#${tag}`, '999')}</td><td>`
+    getQuizesByTag(quizesByDifficulty, tag)
+      .forEach((quiz) => {
+        challengesREADME += quizToBadge(quiz)
+      })
+    challengesREADME += '</td></tr>'
+  }
+  challengesREADME += '<tr><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code></td><td></td></tr>'
+  challengesREADME += '</tbody></table></details>'
+
+  // by plain text
+  prev = ''
+  challengesREADME += `<br><details><summary>${toDetailsInnerText('by-plain-text')}</summary><br>`
+  for (const quiz of quizesByDifficulty) {
+    if (prev !== quiz.difficulty)
+      challengesREADME += `${prev ? '</ul>' : ''}<h3>${toDifficultyPlainText(quiz.difficulty, quizesByDifficulty.filter(q => q.difficulty === quiz.difficulty).length)}</h3><ul>`
+    challengesREADME += `<li>${quizToBadge(quiz, false, false)}</li>`
+    prev = quiz.difficulty
+  }
+  challengesREADME += '</ul></details><br>'
+
+  let readme = await fs.readFile(filepath, 'utf-8')
+  readme = readme.replace(
+    /<!--challenges-start-->[\s\S]*<!--challenges-end-->/m,
+      `<!--challenges-start-->\n${challengesREADME}\n<!--challenges-end-->`,
+  )
+  await fs.writeFile(filepath, readme, 'utf-8')
 }
 
 async function updateQuestionsREADME(quizes: Quiz[]) {
@@ -190,17 +185,14 @@ async function updateQuestionsREADME(quizes: Quiz[]) {
 
   // update each questions' readme
   for (const quiz of quizes) {
-    for (const locale of supportedLocales) {
-      await insertInfoReadme(
-        path.join(
-          questionsDir,
-          quiz.path,
-          f('README', locale, 'md'),
-        ),
-        quiz,
-        locale,
-      )
-    }
+    await insertInfoReadme(
+      path.join(
+        questionsDir,
+        quiz.path,
+        f('README', 'md'),
+      ),
+      quiz,
+    )
   }
 }
 

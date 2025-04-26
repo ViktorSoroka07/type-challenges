@@ -1,16 +1,23 @@
 import path from 'node:path'
 import process from 'node:process'
 import crypto from 'node:crypto'
+import slug from 'limax'
 import fs from 'fs-extra'
 import c from 'ansis'
 import prompts from 'prompts'
 import { formatToCode } from './actions/utils/formatToCode'
 import { loadQuizes, resolveInfo } from './loader'
-import { supportedLocales } from './locales'
-import { getQuestionFullName } from './actions/issue-pr'
 import type { QuizMetaInfo } from './types'
+import { locale } from './locales'
 
 type Snapshot = Record<string, string>
+
+function getQuestionFullName(no: number, difficulty: string, title: string) {
+  return `${String(no).padStart(5, '0')}-${difficulty}-${slug(
+    title.replace(/\./g, '-').replace(/<.*>/g, ''),
+    { tone: false },
+  )}`
+}
 
 function calculateFileHash(filePathFull: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -94,8 +101,6 @@ async function generatePlayground() {
   const playgroundPath = path.join(__dirname, '../playground')
   const playgroundCachePath = path.join(__dirname, '../.playgroundcache')
 
-  let locale = supportedLocales.find(locale => locale === process.argv[2])!
-
   console.log(c.bold.cyan('Generating local playground...\n'))
 
   let overridableFiles: Snapshot
@@ -122,21 +127,6 @@ async function generatePlayground() {
       return console.log(c.yellow('Skipped.'))
   }
 
-  if (!locale) {
-    const result = await prompts([{
-      name: 'locale',
-      type: 'select',
-      message: 'Select language:',
-      choices: supportedLocales.map(i => ({
-        title: i,
-        value: i,
-      })),
-    }])
-    if (!result)
-      return console.log(c.yellow('Skipped.'))
-    locale = result.locale
-  }
-
   if (!keepChanges) {
     await fs.remove(playgroundPath)
     await fs.ensureDir(playgroundPath)
@@ -146,7 +136,7 @@ async function generatePlayground() {
   const incomingQuizesCache: Snapshot = {}
 
   for (const quiz of quizes) {
-    const { difficulty, title } = resolveInfo(quiz, locale) as QuizMetaInfo & { difficulty: string }
+    const { difficulty, title } = resolveInfo(quiz) as QuizMetaInfo & { difficulty: string }
     const code = formatToCode(quiz)
 
     if (difficulty === undefined || title === undefined) {

@@ -3,7 +3,7 @@ import fs from 'fs-extra'
 import fg from 'fast-glob'
 import YAML from 'js-yaml'
 import type { Quiz, QuizMetaInfo } from './types'
-import { defaultLocale, supportedLocales } from './locales'
+import { locale } from './locales'
 
 export async function loadFile(filepath: string) {
   if (fs.existsSync(filepath))
@@ -18,18 +18,16 @@ export async function loadLocaleVariations<T = string>(
   const { ext, dir, name } = path.parse(filepath)
   const data: Record<string, T> = {}
 
-  for (const locale of supportedLocales) {
-    const file = preprocessor(await loadFile(path.join(dir, `${name}.${locale}${ext}`)) || '')
+  const file = preprocessor(await loadFile(path.join(dir, `${name}.${locale}${ext}`)) || '')
 
-    if (file)
-      data[locale] = file
-  }
+  if (file)
+    data[locale] = file
 
-  if (!data[defaultLocale]) {
+  if (!data[locale]) {
     // default version
     const file = preprocessor(await loadFile(filepath) || '')
     if (file)
-      data[defaultLocale] = file
+      data[locale] = file
   }
 
   return data
@@ -92,22 +90,10 @@ export async function loadQuiz(dir: string): Promise<Quiz> {
   }
 }
 
-export async function loadQuizByNo(no: number | string) {
-  const folders = await fg(`${no}-*`, {
-    onlyDirectories: true,
-    cwd: QUIZ_ROOT,
-  })
-
-  if (folders.length)
-    return await loadQuiz(folders[0])
-
-  return undefined
-}
-
-export function resolveInfo(quiz: Quiz, locale: string = defaultLocale) {
-  const info = Object.assign({}, quiz.info[defaultLocale], quiz.info[locale])
-  info.tags = quiz.info[locale]?.tags || quiz.info[defaultLocale]?.tags || []
-  info.related = quiz.info[locale]?.related || quiz.info[defaultLocale]?.related || []
+export function resolveInfo(quiz: Quiz) {
+  const info = Object.assign({}, quiz.info[locale])
+  info.tags = quiz.info[locale]?.tags || []
+  info.related = quiz.info[locale]?.related || []
 
   if (typeof info.tags === 'string')
     // @ts-expect-error

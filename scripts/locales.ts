@@ -1,22 +1,17 @@
-export const defaultLocale = 'en'
+export const locale = 'en'
 
-export const supportedLocales = ['en'] as const
+// eslint-disable-next-line ts/no-var-requires
+export const messages = require('./locales/en.json')
 
-export const messages = {
-  en: require('./locales/en.json'),
-}
+export function t(key: string): string {
+  const result = messages[key]
 
-export type SupportedLocale = keyof typeof messages
-
-export function t(locale: SupportedLocale, key: string): string {
-  const result = (messages[locale] && messages[locale][key]) || messages[defaultLocale][key]
   if (!result)
     throw new Error(`Missing message for key "${key}"`)
+
   return result
 }
 
-export function f(name: string, locale: string, ext: string) {
-  if (locale === defaultLocale)
-    return `${name}.${ext}`
-  return `${name}.${locale}.${ext}`
+export function f(name: string, ext: string) {
+  return `${name}.${ext}`
 }
